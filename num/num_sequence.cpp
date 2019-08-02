@@ -1,32 +1,39 @@
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
 class num_sequence
 {
 public:
-  virtual ~num_sequence(){};
+  virtual ~num_sequence();
 
   virtual int elem(int pos) const = 0;
-  virtual const char *what_am_i() const;
+  virtual const char *what_am_i() const = 0;
   static int max_elems() { return _max_elems; };
   virtual ostream &print(ostream &os = cout) const = 0;
+  // static void display(ostream &os, const num_sequence &ns, int pos);
 
 protected:
   virtual void gen_elems(int pos) const = 0;
-  bool check_integrity(int pos) const;
+  bool check_integrity(int pos, int size) const;
 
   const static int _max_elems = 1024;
 };
 
 inline num_sequence::~num_sequence(){};
 
-bool num_sequence::check_integrity(int pos) const
+bool num_sequence::check_integrity(int pos, int size) const
 {
   if (pos <= 0 || pos > _max_elems)
   {
     cerr << "!! invalid position: " << pos << " Cannot honor request\n ";
     return false;
+  }
+
+  if (pos > size)
+  {
+    gen_elems(pos);
   }
   return true;
 }
@@ -36,42 +43,94 @@ ostream &operator<<(ostream &os, const num_sequence &ns)
   return ns.print(os);
 }
 
-// class num_sequence
-// {
-//   public:
-//     typedef void (num_sequence::*PtrType)(int);
+class Fibonacci : public num_sequence
+{
+public:
+  Fibonacci(int len = 1, int beg_pos = 1) : _length(len), _beg_pos(beg_pos){};
+  virtual int elem(int pos) const;
+  virtual const char *what_am_i() const { return "Fibonacci"; }
+  virtual ostream &print(ostream &os = cout) const;
+  int length() const { return _length; }
+  int beg_pos() const { return _beg_pos; }
 
-//     void fibonacci(int);
-//     void pell(int);
+protected:
+  virtual void gen_elems(int pos) const;
+  int _length;
+  int _beg_pos;
+  static vector<int> _elems;
+};
 
-//     bool check_intergrity(int pos) const;
+vector<int> Fibonacci::_elems;
 
-//     int elem(int pos)
-//     {
-//         if (!check_intergrity(pos))
-//             return 0;
+int Fibonacci::elem(int pos) const
+{
+  if (!check_integrity(pos, _elems.size()))
+  {
+    return 0;
+  }
+  // if (pos > _elems.size())
+  // {
+  //   Fibonacci::gen_elems(pos);
+  // }
+  return _elems[pos - 1];
+}
 
-//         if (pos > _elem->size())
-//         {
-//             (this->*_pmf)(pos);
-//         }
+void Fibonacci::gen_elems(int pos) const
+{
+  if (_elems.empty())
+  {
+    _elems.push_back(1);
+    _elems.push_back(1);
+  }
+  if (_elems.size() <= pos)
+  {
+    int ix = _elems.size();
+    int n_2 = _elems[ix - 2];
+    int n_1 = _elems[ix - 1];
 
-//         return (*_elem)[pos - 1];
-//     }
+    for (; ix <= pos; ++ix)
+    {
+      int elem = n_2 + n_1;
+      // cout << "gen_elems: " << elem << endl;
+      _elems.push_back(elem);
+      n_2 = n_1;
+      n_1 = elem;
+    }
+  }
+}
 
-//   private:
-//     vector<int> *_elem;
-//     PtrType _pmf;
-//     static const int num_seq = 3;
-//     static PtrType func_tbl[num_seq];
-//     static vector<vector<int>> seq;
-// };
+ostream &Fibonacci::print(ostream &os) const
+{
+  int elem_pos = _beg_pos - 1;
+  int end_pos = elem_pos + _length;
+  if (end_pos >= _elems.size())
+  {
+    Fibonacci::gen_elems(end_pos);
+  }
+  os << "( " << _beg_pos << " , " << _length << " ) ";
 
-// // const int num_sequence::num_seq;
-// vector<vector<int>> num_sequence::seq(num_seq);
+  while (elem_pos < end_pos)
+  {
+    os << _elems[elem_pos++] << " ";
+  }
+  return os;
+}
 
-// num_sequence::PtrType num_sequence::func_tbl[num_seq] =
-//     {
-//         0,
-//         &num_sequence::fibonacci,
-//         &num_sequence::pell};
+inline void display(ostream &os, const num_sequence &ns, int pos)
+{
+  os << "The element at position " << pos << " for the " << ns.what_am_i() << " sequence is " << ns.elem(pos) << endl;
+}
+
+int main()
+{
+  Fibonacci fib;
+  cout << "fib: beginning at element 1 for 1 element: " << fib << endl;
+
+  Fibonacci fib2(16);
+  cout << "fib2: beginning at element 1 for 16 element: " << fib2 << endl;
+
+  Fibonacci fib3(8, 12);
+  cout << "fib3: beginning at element 12 for 8 elements: " << fib3 << endl;
+
+  display(cout, fib3, 8);
+}
